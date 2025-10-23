@@ -3,8 +3,9 @@ import subprocess
 import os
 
 # --- Configuration for Windows/Cross-Platform Robustness ---
-# Note: Ensure you compiled to extended_mst.exe on Windows!
+# NOTE: Using .exe for Windows/robustness. You must compile to extended_mst.exe!
 EXECUTABLE_FILENAME = "extended_mst.exe" 
+# Get the absolute path to the directory where the Python script is running
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 C_EXECUTABLE_PATH = os.path.join(BASE_DIR, EXECUTABLE_FILENAME)
 INPUT_FILE_PATH = os.path.join(BASE_DIR, "graph_input.txt")
@@ -80,7 +81,7 @@ def run_c_solver():
         return None
 
     try:
-        # We pass the absolute path to both the executable and the input file
+        # Pass the absolute path to both the executable and the input file
         result = subprocess.run(
             [C_EXECUTABLE_PATH, INPUT_FILE_PATH], 
             capture_output=True, 
@@ -189,7 +190,9 @@ if st.button("Calculate Extended MST"):
                 st.dataframe(table_data, use_container_width=True, hide_index=True)
 
                 cost_breakdown = ' + '.join(str(e['C_e']) for e in mst_edges)
-                st.markdown(f"**Total Cost Sum:** $\\text{{{cost_breakdown}}} = \\mathbf{{{total\_cost}}}$")
+                
+                # CORRECTED LINE 192: Fixes the SyntaxError by ensuring valid Python/LaTeX
+                st.markdown(f"**Total Cost Sum:** $\\text{{{cost_breakdown}}} = \\mathbf{{{total_cost}}}$") 
 
             else:
                 st.error("C program output could not be parsed.")
