@@ -3,7 +3,7 @@ import subprocess
 import os
 
 # --- Configuration ---
-# NOTE: The C executable must be compiled and placed in the same directory.
+# C executable MUST be named 'extended_mst' and be in the same directory.
 C_EXECUTABLE_PATH = "./extended_mst"  
 INPUT_FILE_PATH = "graph_input.txt"
 
@@ -12,64 +12,54 @@ INPUT_FILE_PATH = "graph_input.txt"
 # ====================================================================
 
 def generate_input_file(node_weights_str, edges_str):
-    """
-    Translates user-friendly input (A:10, B,C,5) into a structured format
-    required by the C executable and saves it to INPUT_FILE_PATH.
-    
-    C Input File Format:
-    Line 1: V E
-    Line 2: w0 w1 w2 ... (Node weights by index)
-    Line 3+: u_idx v_idx w_e
-    """
+    """Generates the structured input file for the C executable."""
     nodes = []
     node_weights = {}
     
     try:
-        # 1. Parse Node Weights (ID:Weight)
+        # 1. Parse Node Weights
         for line in node_weights_str.split('\n'):
             if line.strip():
                 node_id, weight = line.split(':')
                 nodes.append(node_id.strip())
                 node_weights[node_id.strip()] = int(weight.strip())
         
-        # 2. Parse Edges (u,v,w_e)
+        # 2. Parse Edges
         edges = []
         for line in edges_str.split('\n'):
             if line.strip():
                 u, v, w_e = line.split(',')
-                u = u.strip()
-                v = v.strip()
-                w_e = int(w_e.strip())
+                u = u.strip(); v = v.strip(); w_e = int(w_e.strip())
                 
                 if u not in node_weights or v not in node_weights:
                     st.error(f"Edge error: Node '{u}' or '{v}' not defined in Node Weights.")
                     return False, [], {}
-                
                 edges.append((u, v, w_e))
 
     except Exception as e:
-        st.error(f"Input parsing error: Check formatting (ID:Weight or u,v,w_e). Details: {e}")
+        st.error(f"Input parsing error. Details: {e}")
         return False, [], {}
 
     V = len(nodes)
     E = len(edges)
+    
+    # Check for empty graph
+    if V == 0 or E == 0:
+        st.info("No calculations needed: Graph is empty or has no edges.")
+        return False, [], {}
 
     # 3. Create the input file
     try:
         with open(INPUT_FILE_PATH, 'w') as f:
-            # Line 1: V and E
             f.write(f"{V} {E}\n")
             
-            # Line 2: Node weights (mapped to C's 0-indexed structure)
             node_map = {name: i for i, name in enumerate(nodes)}
-            
             weight_list = [0] * V
             for name, idx in node_map.items():
                 weight_list[idx] = node_weights[name]
                 
             f.write(" ".join(map(str, weight_list)) + "\n")
             
-            # Line 3+: Edges (u_idx, v_idx, w_e)
             for u, v, w_e in edges:
                 f.write(f"{node_map[u]} {node_map[v]} {w_e}\n")
 
@@ -83,16 +73,15 @@ def run_c_solver():
     """Executes the compiled C program and captures its stdout."""
     st.info(f"Executing C program: {C_EXECUTABLE_PATH} {INPUT_FILE_PATH}")
     try:
-        # Run C executable, passing the input file path as an argument
         result = subprocess.run(
             [C_EXECUTABLE_PATH, INPUT_FILE_PATH], 
             capture_output=True, 
             text=True, 
-            check=True  # Raises an error if C program returns non-zero exit code
+            check=True
         )
         return result.stdout
     except subprocess.CalledProcessError as e:
-        st.error(f"C program (Extended MST) failed with exit code {e.returncode}.")
+        st.error(f"C program (Extended MST) failed with error code {e.returncode}.")
         st.code(f"STDERR:\n{e.stderr}\n\nSTDOUT:\n{e.stdout}")
         return None
     except FileNotFoundError:
@@ -105,8 +94,6 @@ def parse_c_output(output, node_names):
     total_cost = None
     mst_edges = []
     parsing_edges = False
-
-    # Create reverse map: Node Index -> Node Name (e.g., 0->A, 1->B)
     name_map = {i: name for i, name in enumerate(node_names)}
 
     for line in lines:
@@ -118,7 +105,6 @@ def parse_c_output(output, node_names):
             parsing_edges = False
         elif parsing_edges:
             try:
-                # Format: u_idx,v_idx,w_e,w_u,w_v,C_e
                 parts = line.split(',')
                 u_idx, v_idx, w_e, w_u, w_v, C_e = map(int, parts)
                 
@@ -141,13 +127,9 @@ def parse_c_output(output, node_names):
 
 st.set_page_config(layout="wide")
 st.title("🗜️ C Core Extended MST Solver (via Streamlit)")
-st.markdown(
-    "This app uses a **C program** as its core solver, executed via Python's `subprocess`."
-)
 st.markdown("---")
 
 st.header("1. Define Node Weights")
-st.markdown("Enter node IDs (letters/numbers) and their weights, separated by a colon (e.g., `A:10`).")
 node_input = st.text_area(
     "Node Weights (ID:Weight)", 
     "A:10\nB:5\nC:3\nD:1",
@@ -155,7 +137,6 @@ node_input = st.text_area(
 )
 
 st.header("2. Define Edges")
-st.markdown("Enter edges as `Node1,Node2,EdgeWeight` (e.g., `A,B,2`). Node IDs must match those defined above.")
 edge_input = st.text_area(
     "Edges (u,v,w_e)", 
     "A,B,2\nB,C,3\nC,D,4\nA,D,5\nB,D,1",
@@ -164,25 +145,21 @@ edge_input = st.text_area(
 
 st.header("3. Run Algorithm")
 st.markdown(
-    "The algorithm (Extended Kruskal's) minimizes the **Effective Edge Cost ($C_e$)**: "
+    "The algorithm minimizes the **Effective Edge Cost ($C_e$)**: "
     "$$\\text{Effective Cost } (C_e) = w_{edge} + w_{node\_u} + w_{node\_v}$$"
 )
 
 if st.button("Calculate Extended MST"):
     
-    # 1. Generate Input File
     success, nodes, node_weights_dict = generate_input_file(node_input, edge_input)
 
     if success:
-        
-        # 2. Execute C Core
         c_output = run_c_solver()
 
         st.markdown("---")
         st.subheader("✅ Results")
 
         if c_output:
-            # 3. Parse and Display Results
             total_cost, mst_edges = parse_c_output(c_output, nodes)
 
             if total_cost == -1:
@@ -190,7 +167,6 @@ if st.button("Calculate Extended MST"):
             elif total_cost is not None:
                 st.success(f"**Minimum Extended Cost:** `{total_cost}`")
                 
-                # Display the selected MST edges
                 st.markdown("##### Selected Edges in the Extended MST")
                 
                 table_data = []
