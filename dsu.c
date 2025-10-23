@@ -15,7 +15,6 @@ void initDSU(int V) {
             parent[i] = i; 
         }
     } else {
-        // Handle memory failure
         if (parent) free(parent);
         if (rank) free(rank);
         parent = NULL;
