@@ -41,7 +41,6 @@ void freeGraph(Graph* graph) {
     }
 }
 
-// Comparison function for qsort (sorts by effective_cost)
 int compareEdges(const void* a, const void* b) {
     const Edge* edgeA = (const Edge*)a;
     const Edge* edgeB = (const Edge*)b;
@@ -78,7 +77,7 @@ int findExtendedMST(Graph* graph, Edge** mst_edges_out) {
     qsort(graph->edges, E, sizeof(Edge), compareEdges);
 
     initDSU(V);
-    if (!find(0)) { return -1; }
+    if (!find(0) && V > 0) { return -1; }
 
     *mst_edges_out = (Edge*)malloc((V - 1) * sizeof(Edge));
     if (!*mst_edges_out) { cleanupDSU(); return -1; }
@@ -103,8 +102,6 @@ int findExtendedMST(Graph* graph, Edge** mst_edges_out) {
 
     return total_cost;
 }
-
-// --- Structured Output Function ---
 
 void print_mst_result(int total_cost, const Edge* mst_edges, int num_edges, const Graph* graph) {
     printf("TOTAL_COST:%d\n", total_cost);
@@ -154,7 +151,7 @@ int main(int argc, char *argv[]) {
         addEdge(graph, i, u, v, w);
     }
     
-    fclose(fp); // Close file before MST execution
+    fclose(fp);
     
     Edge* mst_result_edges = NULL;
     int total_cost = findExtendedMST(graph, &mst_result_edges);
@@ -173,6 +170,5 @@ error_cleanup:
     freeGraph(graph);
 error_exit:
     if (fp) fclose(fp);
-    fprintf(stderr, "RUNTIME ERROR: Invalid graph data or memory failure.\n");
     return 1;
 }
