@@ -3,7 +3,7 @@ import subprocess
 import os
 
 # --- Configuration for Windows/Cross-Platform Robustness ---
-# NOTE: Using .exe for Windows/robustness. You must compile to extended_mst.exe!
+# NOTE: Ensure you compile to extended_mst.exe!
 EXECUTABLE_FILENAME = "extended_mst.exe" 
 # Get the absolute path to the directory where the Python script is running
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -191,7 +191,7 @@ if st.button("Calculate Extended MST"):
 
                 cost_breakdown = ' + '.join(str(e['C_e']) for e in mst_edges)
                 
-                # CORRECTED LINE 192: Fixes the SyntaxError by ensuring valid Python/LaTeX
+                # FIXED SYNTAX: The correct way to include the variable
                 st.markdown(f"**Total Cost Sum:** $\\text{{{cost_breakdown}}} = \\mathbf{{{total_cost}}}$") 
 
             else:
